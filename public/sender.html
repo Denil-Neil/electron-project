@@ -69,7 +69,13 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('https://electron-project.onrender.com/sender');
+        const socket = io('https://electron-project.onrender.com');
+        socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+  // Show a user-friendly error message
+});
+
+
         
         function sendMessage() {
             const messageInput = document.getElementById('messageInput');
