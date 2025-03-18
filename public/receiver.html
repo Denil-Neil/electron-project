@@ -2,35 +2,53 @@
 <html>
 <head>
     <title>Message Receiver</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://electron-project.onrender.com https://cdn.socket.io; script-src 'self' https://cdn.socket.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://electron-project.onrender.com wss://electron-project.onrender.com ws://electron-project.onrender.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://electron-project.onrender.com https://cdn.socket.io; script-src 'self' 'unsafe-inline' https://cdn.socket.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://electron-project.onrender.com wss://electron-project.onrender.com;">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             margin: 0;
-            padding: 15px;
+            padding: 10px;
             background: transparent;
             overflow: hidden;
             -webkit-app-region: drag;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
+            opacity: 0.7; /* Default partially transparent */
+            transition: opacity 0.3s ease;
+        }
+        body:hover {
+            opacity: 1; /* Full opacity on hover */
         }
         #message {
             background: rgba(255, 255, 255, 0.2);
-            padding: 15px 20px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
             word-wrap: break-word;
             max-width: 90%;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             animation: fadeIn 0.3s ease-in;
-            font-size: 16px;
-            line-height: 1.4;
+            font-size: 13px;
+            line-height: 1.3;
             color: #000;
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
+        }
+        #debug {
+            display: none; /* Hide the debug panel */
+            font-size: 10px;
+            color: #666;
+            margin-top: 8px;
+            max-height: 80px;
+            overflow-y: auto;
+            width: 90%;
+            background: rgba(0,0,0,0.1);
+            padding: 3px;
+            border-radius: 4px;
         }
         @keyframes fadeIn {
             from {
@@ -50,48 +68,97 @@
         .message-received {
             animation: flash 0.5s ease-out;
         }
+        /* New style for message when new message arrives */
+        .new-message {
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+        /* Question number indicator */
+        #question-number {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 10px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
+    <div id="question-number">Q1</div>
     <div id="message">Connecting to Render...</div>
+    <div id="debug"></div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const messageDiv = document.getElementById('message');
+        const debugDiv = document.getElementById('debug');
+        const questionNumberDiv = document.getElementById('question-number');
+        const RENDER_URL = 'https://electron-project.onrender.com';
+        let currentQuestionNumber = 1; // Track the current question number
+        
+        // Update the question number display
+        function updateQuestionNumber(num) {
+            currentQuestionNumber = num;
+            questionNumberDiv.textContent = `Q${num}`;
+        }
+        
+        function addDebug(text) {
+            const time = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `<div>[${time}] ${text}</div>`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+            console.log(text);
+        }
 
         function updateStatus(status) {
-            console.log('Status:', status);
+            addDebug('Status: ' + status);
             messageDiv.textContent = status;
         }
 
         try {
             updateStatus('Connecting to Render server...');
             
-            const socket = io('https://electron-project.onrender.com', {
-                transports: ['websocket', 'polling'],
-                reconnection: true,
+            const socket = io(RENDER_URL, {
+                transports: ['polling', 'websocket'],
                 reconnectionAttempts: Infinity,
-                timeout: 10000,
-                secure: true,
-                rejectUnauthorized: false,
-                autoConnect: true
+                timeout: 10000
             });
 
             socket.on('connect', () => {
-                console.log('Connected to Render server');
+                addDebug('Connected to Render server');
                 updateStatus('Connected! Waiting for messages...');
-                
-                // Send a test message to verify connection
-                socket.emit('test', { time: new Date().toISOString() });
+            });
+
+            // Listen for question number updates
+            socket.on('question-number', (num) => {
+                addDebug('Received question number update: ' + num);
+                updateQuestionNumber(parseInt(num));
             });
 
             socket.on('message', (msg) => {
-                console.log('Received message:', msg);
+                addDebug('Received message: ' + msg);
+                
+                // Check if message contains question number update
+                if (msg.startsWith('Q:')) {
+                    const parts = msg.split(':');
+                    if (parts.length > 1 && !isNaN(parseInt(parts[1]))) {
+                        updateQuestionNumber(parseInt(parts[1]));
+                        return; // Don't display this as a regular message
+                    }
+                }
+                
+                // Force window to be fully visible when message arrives
+                document.body.style.opacity = '1';
                 
                 // Add flash effect
                 messageDiv.classList.remove('message-received');
+                messageDiv.classList.remove('new-message');
                 void messageDiv.offsetWidth; // Trigger reflow
                 messageDiv.classList.add('message-received');
+                messageDiv.classList.add('new-message');
                 
                 // Fade out current text
                 messageDiv.style.opacity = '0';
@@ -102,16 +169,22 @@
                     messageDiv.textContent = msg;
                     messageDiv.style.opacity = '1';
                     messageDiv.style.transform = 'translateY(0)';
+                    
+                    // Reset opacity after 10 seconds
+                    setTimeout(() => {
+                        document.body.style.opacity = '0.7';
+                        messageDiv.classList.remove('new-message');
+                    }, 10000);
                 }, 300);
             });
 
             socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
+                addDebug('Connection error: ' + error.message);
                 updateStatus('Connection error: ' + error.message);
             });
 
             socket.on('disconnect', (reason) => {
-                console.log('Disconnected:', reason);
+                addDebug('Disconnected: ' + reason);
                 updateStatus('Disconnected: ' + reason);
                 
                 // Attempt to reconnect
@@ -121,19 +194,12 @@
             });
 
             socket.on('error', (error) => {
-                console.error('Socket error:', error);
+                addDebug('Socket error: ' + error.message);
                 updateStatus('Socket error: ' + error.message);
             });
 
-            // Handle any errors that occur during connection
-            window.onerror = function(msg, url, line) {
-                console.error('Window error:', msg);
-                updateStatus('Error: ' + msg);
-                return false;
-            };
-
         } catch (error) {
-            console.error('Initialization error:', error);
+            addDebug('Initialization error: ' + error.message);
             updateStatus('Error: ' + error.message);
         }
     </script>
