@@ -1,22 +1,24 @@
 {
-  "name": "electronproject",
-  "version": "1.0.0",
-  "main": "main.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "electron": "electron ."
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "Real-time messaging app with Electron",
-  "dependencies": {
-    "electron": "latest",
-    "express": "latest",
-    "socket.io": "latest"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "name": "electronproject",
+    "version": "1.0.0",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js",
+      "dev": "node server.js",
+      "electron": "electron ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "Real-time messaging app with Electron",
+    "dependencies": {
+      "express": "^4.18.2",
+      "socket.io": "^4.7.2"
+    },
+    "devDependencies": {
+      "electron": "^28.2.0"
+    },
+    "engines": {
+      "node": ">=18.0.0"
+    }
   }
-}
