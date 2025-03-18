@@ -47,7 +47,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        const socket = io('https://electron-project.onrender.com/sender');
         const messageDiv = document.getElementById('message');
         
         socket.on('message', (msg) => {
