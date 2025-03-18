@@ -2,7 +2,7 @@ const { app, BrowserWindow, globalShortcut } = require('electron');
 const path = require('path');
 
 // Change this to your deployed server URL once you have it
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
+const SERVER_URL = process.env.SERVER_URL || 'https://electron-project.onrender.com';
 
 let mainWindow = null;
 
@@ -46,4 +46,4 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
-}); 
+});
